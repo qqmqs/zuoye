@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8位段码屏 · 教学展示</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(145deg, #1a1e2b 0%, #2b3142 100%);
+            padding: 16px;
+        }
+        .card {
+            background: #0f1219;
+            border-radius: 56px;
+            box-shadow: 0 25px 40px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+            padding: 40px 32px 40px 32px;
+            max-width: 800px;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        h1 {
+            text-align: center;
+            color: #d0e0ff;
+            font-weight: 400;
+            font-size: 1.9rem;
+            letter-spacing: 2px;
+            margin-top: -8px;
+            margin-bottom: 24px;
+            text-shadow: 0 0 10px #3a6ea5;
+            word-break: break-word;
+        }
+        .display-panel {
+            background: #05080c;
+            border-radius: 40px;
+            padding: 28px 20px;
+            box-shadow: inset 0 6px 12px rgba(0, 0, 0, 0.8), 0 0 0 2px #2a3140, 0 0 0 4px #0b0e13;
+        }
+        .segment-grid {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+        /* 8个独立小灯（段码） */
+        .lamp {
+            width: 70px;
+            height: 90px;
+            background: #1e232e;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 0 2px #0a0d12, 0 10px 0 #0a0d12, 0 12px 20px rgba(0, 0, 0, 0.7);
+            transition: all 0.25s ease;
+            position: relative;
+            cursor: default;
+            flex-shrink: 0;
+        }
+        .lamp .segment {
+            width: 48px;
+            height: 16px;
+            background: #2e3542;
+            border-radius: 20px;
+            margin: 6px 0;
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8), 0 0 0 1px #14181f;
+            transition: background 0.2s, box-shadow 0.2s, filter 0.2s;
+        }
+        /* 点亮状态 */
+        .lamp.active .segment {
+            background: #f0c45a;
+            box-shadow: 0 0 16px #ffbb2b, 0 0 8px #ffaa00, inset 0 1px 4px #fff9e0;
+        }
+        /* 每个灯有8个段(为了方便演示，每个灯内部画8个水平条？不行，那样太乱。重新设计: 每个小灯代表一个数字的7段? 
+           但题目要求“8位段码屏，其中有8个小灯”。为了直观，每个灯代表一个段，那么8个灯就是8段。
+           但常见的段码屏7段+1个小数点 = 8段。所以我们用8个独立灯，每个灯代表一段（A,B,C,D,E,F,G,DP）。
+           为了视觉上更像“小灯”，每个灯用圆圈或条状，但这里为了美观和可读，我们把每个灯做成一个“发光条块”，每个灯内部包含8个段?
+           不对，如果是8个小灯，每个小灯是一个独立发光点，但是要显示数字0-9需要7段（或8段）分别控制。
+           为了教学展示并且能显示数字，这里每个“小灯”其实是一个“段”，所以8个灯分别对应段A-G + DP。
+           但是视觉上，如果8个灯排成一行，更像一个8段条形图。但为了更像数字显示，我们模拟数码管布局。
+           但是问题要求是“8位段码屏，其中有8个小灯”，更合理的解释是：每个数字位有8个段（7段+小数点），但题目说“8位段码屏，其中有8个小灯”，又说是8位，又说是8个小灯，有点歧义。
+           常见的“8位段码屏”可能指8个数字位，每个位有7段，但这里说“其中有8个小灯”可能指每个位有8个段（即7段+dp）。但为了简单且符合“8个小灯”的描述，
+           我们重新理解：整个屏幕只有一个数字位（一个8段数码管），由8个小灯组成（7个笔画+1个小数点）。这样显示数字0-9。这样更合理。
+           所以：8个小灯，每个灯代表一段（A,B,C,D,E,F,G,DP）。我们让每个灯是一个独立圆形或方形。但为了视觉好看，把它们按数码管位置排列。
+           但是题目“8位段码屏”也可能指“8段码屏”（即8 segments），而不是“8位数字”。结合“8个小灯”，我理解为8段码屏（8个段），每个段是一个灯，组成一个数字显示。
+           所以我们绘制一个数码管样式的8个段（7段+小数点），每个段用一个“小灯”表示。
+        */
+
+        /* 因此重新设计：8个小灯按照数码管段排列，每个灯是一个独立的发光区域 */
+        .segment-display {
+            position: relative;
+            width: 280px;
+            height: 400px;
+            margin: 0 auto 12px;
+        }
+        /* 每个段灯都是绝对定位 */
+        .seg-lamp {
+            position: absolute;
+            background: #1e232e;
+            border-radius: 20px;
+            box-shadow: inset 0 0 0 2px #0a0d12, 0 6px 0 #0a0d12, 0 8px 12px rgba(0,0,0,0.5);
+            transition: all 0.18s cubic-bezier(0.2, 0.9, 0.4, 1);
+            cursor: default;
+        }
+        /* 激活状态: 亮黄色带光晕 */
+        .seg-lamp.active {
+            background: #ffc857;
+            box-shadow: 0 0 30px #ffb82e, 0 0 15px #ffa500, inset 0 0 0 2px #ffe9a7, 0 6px 0 #b87c10, 0 8px 16px black;
+        }
+
+        /* 段位置 (A 上, B 右上, C 右下, D 下, E 左下, F 左上, G 中, DP 小数点) */
+        /* A: 水平上 */
+        .seg-A {
+            width: 140px;
+            height: 32px;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 32px;
+        }
+        /* B: 右上垂直 */
+        .seg-B {
+            width: 32px;
+            height: 120px;
+            top: 42px;
+            right: 12px;
+            border-radius: 32px;
+        }
+        /* C: 右下垂直 */
+        .seg-C {
+            width: 32px;
+            height: 120px;
+            bottom: 42px;
+            right: 12px;
+            border-radius: 32px;
+        }
+        /* D: 下水平 */
+        .seg-D {
+            width: 140px;
+            height: 32px;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 32px;
+        }
+        /* E: 左下垂直 */
+        .seg-E {
+            width: 32px;
+            height: 120px;
+            bottom: 42px;
+            left: 12px;
+            border-radius: 32px;
+        }
+        /* F: 左上垂直 */
+        .seg-F {
+            width: 32px;
+            height: 120px;
+            top: 42px;
+            left: 12px;
+            border-radius: 32px;
+        }
+        /* G: 中间水平 */
+        .seg-G {
+            width: 120px;
+            height: 28px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 28px;
+        }
+        /* DP: 小数点 (放在右下角旁边) */
+        .seg-DP {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            bottom: 12px;
+            right: 12px;
+            box-shadow: inset 0 0 0 2px #0a0d12, 0 4px 0 #0a0d12, 0 6px 10px black;
+        }
+        /* 小数点激活时保持圆形，不改变形状 */
+        .seg-DP.active {
+            background: #ffc857;
+            box-shadow: 0 0 30px #ffb82e, 0 0 15px #ffa500, inset 0 0 0 2px #ffe9a7, 0 4px 0 #b87c10;
+        }
+
+        /* 控制区 */
+        .input-area {
+            margin-top: 40px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+        .input-area label {
+            color: #b0c6e0;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+        }
+        .number-input {
+            background: #1b212c;
+            border: 2px solid #2c3545;
+            border-radius: 60px;
+            padding: 12px 20px;
+            width: 120px;
+            font-size: 1.8rem;
+            font-weight: 600;
+            text-align: center;
+            color: #ffd966;
+            outline: none;
+            box-shadow: inset 0 4px 10px #05080c, 0 2px 0 #323c4e;
+            transition: border 0.2s, box-shadow 0.2s;
+        }
+        .number-input:focus {
+            border-color: #f0b34b;
+            box-shadow: inset 0 4px 10px #05080c, 0 0 0 3px rgba(240, 180, 75, 0.4);
+        }
+        .number-input::-webkit-outer-spin-button,
+        .number-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .number-input[type="number"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+        .digit-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .digit-btn {
+            background: #1b212c;
+            border: none;
+            border-radius: 40px;
+            width: 58px;
+            height: 58px;
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #d6e2f0;
+            box-shadow: 0 6px 0 #0b0e13, 0 8px 14px black;
+            cursor: pointer;
+            transition: transform 0.07s, box-shadow 0.07s, background 0.2s, color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+        .digit-btn:hover {
+            background: #232b39;
+            color: #fff3d1;
+        }
+        .digit-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #0b0e13, 0 5px 12px black;
+        }
+        .digit-btn.active-digit {
+            background: #f0b34b;
+            color: #0e1219;
+            box-shadow: 0 4px 0 #9e6d1a, 0 8px 18px #ffb82e80;
+            transform: translateY(2px);
+        }
+        .clear-btn {
+            background: #2e3648;
+            color: #ffb9b9;
+            width: auto;
+            padding: 0 24px;
+            font-size: 1.2rem;
+        }
+        .clear-btn:hover {
+            background: #3f4a60;
+            color: #ffe1e1;
+        }
+        .status-text {
+            text-align: center;
+            color: #a8b8d0;
+            margin-top: 18px;
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+            height: 28px;
+        }
+        .status-text span {
+            color: #ffd966;
+            font-weight: 600;
+            background: #1b212c;
+            padding: 2px 14px;
+            border-radius: 30px;
+        }
+        .footnote {
+            text-align: center;
+            color: #5d6b82;
+            margin-top: 26px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>⚡ 8 段码屏 · 小灯教学</h1>
+
+        <div class="display-panel">
+            <!-- 8个小灯（段）组成的数字显示区 -->
+            <div class="segment-display" id="segmentDisplay">
+                <div class="seg-lamp seg-A" id="segA"></div>
+                <div class="seg-lamp seg-B" id="segB"></div>
+                <div class="seg-lamp seg-C" id="segC"></div>
+                <div class="seg-lamp seg-D" id="segD"></div>
+                <div class="seg-lamp seg-E" id="segE"></div>
+                <div class="seg-lamp seg-F" id="segF"></div>
+                <div class="seg-lamp seg-G" id="segG"></div>
+                <div class="seg-lamp seg-DP" id="segDP"></div>
+            </div>
+
+            <!-- 输入控制区 -->
+            <div class="input-area">
+                <label for="numInput">输入数字 (0-9) :</label>
+                <input type="number" id="numInput" class="number-input" min="0" max="9" value="8" step="1">
+            </div>
+
+            <!-- 快捷按钮 -->
+            <div class="digit-buttons" id="digitButtons">
+                <!-- 由JS生成0-9按钮，方便维护 -->
+            </div>
+
+            <div class="status-text">
+                当前显示: <span id="currentDigitLabel">8</span> &nbsp;|&nbsp; 点亮段: <span id="activeSegmentsLabel">A, B, C, D, E, F, G</span>
+            </div>
+        </div>
+        <div class="footnote">
+            ⚡ 每个小灯代表一个段 (A~G + DP) · 点击数字或输入切换
+        </div>
+    </div>
+
+    <script>
+        (function(){
+            // 定义0-9对应的段码 (A, B, C, D, E, F, G, DP)  顺序: A,B,C,D,E,F,G,DP
+            // 这里使用标准的7段+DP编码，1表示亮，0表示灭
+            const DIGIT_MAP = {
+                '0': [1, 1, 1, 1, 1, 1, 0, 0], // 0: A B C D E F 亮, G灭, DP灭
+                '1': [0, 1, 1, 0, 0, 0, 0, 0], // 1: B C 亮
+                '2': [1, 1, 0, 1, 1, 0, 1, 0], // 2: A B D E G 亮
+                '3': [1, 1, 1, 1, 0, 0, 1, 0], // 3: A B C D G 亮
+                '4': [0, 1, 1, 0, 0, 1, 1, 0], // 4: B C F G 亮
+                '5': [1, 0, 1, 1, 0, 1, 1, 0], // 5: A C D F G 亮
+                '6': [1, 0, 1, 1, 1, 1, 1, 0], // 6: A C D E F G 亮
+                '7': [1, 1, 1, 0, 0, 0, 0, 0], // 7: A B C 亮
+                '8': [1, 1, 1, 1, 1, 1, 1, 0], // 8: 全部亮 (除了DP)
+                '9': [1, 1, 1, 1, 0, 1, 1, 0]  // 9: A B C D F G 亮
+            };
+
+            // 段元素映射
+            const segElements = {
+                A: document.getElementById('segA'),
+                B: document.getElementById('segB'),
+                C: document.getElementById('segC'),
+                D: document.getElementById('segD'),
+                E: document.getElementById('segE'),
+                F: document.getElementById('segF'),
+                G: document.getElementById('segG'),
+                DP: document.getElementById('segDP')
+            };
+
+            // 按顺序的段名(用于点亮标签显示)
+            const SEG_ORDER = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'DP'];
+
+            const numInput = document.getElementById('numInput');
+            const currentDigitLabel = document.getElementById('currentDigitLabel');
+            const activeSegmentsLabel = document.getElementById('activeSegmentsLabel');
+            const digitButtonsContainer = document.getElementById('digitButtons');
+
+            // 当前数字
+            let currentDigit = '8'; // 默认显示8
+
+            // 更新显示函数 (带动画效果)
+            function updateDisplay(digit) {
+                // 确保digit是0-9的字符串
+                if (!DIGIT_MAP.hasOwnProperty(digit)) {
+                    // 如果无效，回退到8，或者保持原样？为了健壮，回退到8
+                    digit = '8';
+                    numInput.value = 8;
+                }
+                currentDigit = digit;
+                currentDigitLabel.textContent = digit;
+
+                // 获取段码数组
+                const segments = DIGIT_MAP[digit]; // 长度8
+
+                // 遍历点亮/熄灭每个段
+                const activeNames = [];
+                SEG_ORDER.forEach((segName, index) => {
+                    const el = segElements[segName];
+                    if (!el) return;
+                    const isActive = segments[index] === 1;
+                    if (isActive) {
+                        el.classList.add('active');
+                        activeNames.push(segName);
+                    } else {
+                        el.classList.remove('active');
+                    }
+                });
+
+                // 更新点亮段描述
+                activeSegmentsLabel.textContent = activeNames.length ? activeNames.join(', ') : '无';
+
+                // 更新按钮高亮
+                document.querySelectorAll('.digit-btn[data-digit]').forEach(btn => {
+                    if (btn.dataset.digit === digit) {
+                        btn.classList.add('active-digit');
+                    } else {
+                        btn.classList.remove('active-digit');
+                    }
+                });
+
+                // 同步输入框的值 (但不触发额外事件)
+                if (numInput.value !== digit) {
+                    numInput.value = digit;
+                }
+            }
+
+            // 创建0-9的数字按钮 (加上清除按钮？不需要清除，因为只能输入0-9)
+            function createDigitButtons() {
+                // 清空容器，但保留“清除”按钮？不需要清除。只生成0-9
+                digitButtonsContainer.innerHTML = '';
+                for (let i = 0; i <= 9; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'digit-btn';
+                    btn.dataset.digit = i.toString();
+                    btn.textContent = i;
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const d = btn.dataset.digit;
+                        updateDisplay(d);
+                    });
+                    digitButtonsContainer.appendChild(btn);
+                }
+                // 额外加一个重置到8的按钮？ 可以加一个清零? 但0也是数字，所以不需要。加一个"重置"? 不必要。
+                // 但为了美观，可以在最后加一个clear按钮？不加了，保持简洁。
+            }
+
+            // 处理输入框的变化
+            function handleInputChange() {
+                let value = numInput.value.trim();
+                // 如果为空，暂时不处理，但为了体验，可以保留上一个数字或者变成0？最好提示，但简单处理：如果为空则回退到8
+                if (value === '') {
+                    // 不更新，等用户输入
+                    return;
+                }
+                // 只取第一个字符? 或者解析为整数
+                let num = Number(value);
+                if (isNaN(num)) {
+                    // 非法输入，重置到0或者保留？为了不闪烁，保留当前显示，但输入框可能不合法，我们修正为当前数字
+                    numInput.value = currentDigit;
+                    return;
+                }
+                // 取0-9之间的整数
+                num = Math.floor(num); // 舍去小数
+                if (num < 0) num = 0;
+                if (num > 9) num = 9;
+                // 更新显示
+                updateDisplay(num.toString());
+                // 如果输入框的值和num不同（比如输入了10，修正为9），则更新输入框
+                if (Number(numInput.value) !== num) {
+                    numInput.value = num;
+                }
+            }
+
+            // 输入框事件: 使用input事件实时响应
+            numInput.addEventListener('input', handleInputChange);
+            // 额外处理change事件，防止失去焦点时值不一致
+            numInput.addEventListener('change', handleInputChange);
+
+            // 键盘上下箭头等由浏览器默认处理，但我们阻止数字超出范围? 在input事件中已经处理
+            // 但还需要处理按键直接输入例如"12"，先显示1然后显示2? 我们的input事件处理会直接截取为1或2? 上面处理为整数，如果用户输入12，Number(12)=12，会被修正为9。
+            // 用户输入"12"输入框会短暂显示12然后修正为9，可以接受。
+            // 如果用户输入"1a"，Number('1a') => NaN，会被重置为当前数字。
+
+            // 初始化界面
+            function init() {
+                createDigitButtons();
+                // 设置初始显示为8
+                updateDisplay('8');
+                // 确保输入框显示8
+                numInput.value = '8';
+            }
+
+            init();
+
+            // 附加：点击某个段本身可以增加交互? 不需要，但可以高亮显示，但保持简洁。
+            // 但为了教学，可以增加鼠标悬浮显示段名称（可选），为了简洁不做了。
+
+            // 另外，为了防止输入框内出现负号等，可以监听keydown，但input已处理
+        })();
+    </script>
+</body>
+</html>
